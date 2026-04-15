@@ -2,7 +2,9 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { View, Hide } from '@element-plus/icons-vue'
 import { registerApi } from '../api/auth'
+import ParticleLinkBackground from '../components/ParticleLinkBackground.vue'
 
 const router = useRouter()
 
@@ -64,13 +66,14 @@ const goLogin = () => {
 
 <template>
   <div class="page">
+    <ParticleLinkBackground />
     <div class="login-card">
       <h2 class="title">注册校园实验室预约系统账号</h2>
 
       <form class="form" @submit.prevent="handleRegister">
         <div class="form-item">
           <div class="input-wrapper">
-            <span class="icon">👤</span>
+            <span class="icon icon--account" aria-hidden="true" />
             <input
               v-model="account"
               type="text"
@@ -81,7 +84,7 @@ const goLogin = () => {
 
         <div class="form-item">
           <div class="input-wrapper">
-            <span class="icon">🔒</span>
+            <span class="icon icon--password" aria-hidden="true" />
             <input
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
@@ -93,14 +96,17 @@ const goLogin = () => {
               :aria-label="showPassword ? '隐藏密码' : '显示密码'"
               @click="showPassword = !showPassword"
             >
-              {{ showPassword ? '隐藏' : '显示' }}
+              <el-icon :size="18">
+                <View v-if="!showPassword" />
+                <Hide v-else />
+              </el-icon>
             </button>
           </div>
         </div>
 
         <div class="form-item">
           <div class="input-wrapper">
-            <span class="icon">🔒</span>
+            <span class="icon icon--password" aria-hidden="true" />
             <input
               v-model="confirmPassword"
               :type="showConfirmPassword ? 'text' : 'password'"
@@ -112,7 +118,10 @@ const goLogin = () => {
               :aria-label="showConfirmPassword ? '隐藏密码' : '显示密码'"
               @click="showConfirmPassword = !showConfirmPassword"
             >
-              {{ showConfirmPassword ? '隐藏' : '显示' }}
+              <el-icon :size="18">
+                <View v-if="!showConfirmPassword" />
+                <Hide v-else />
+              </el-icon>
             </button>
           </div>
         </div>
@@ -155,15 +164,19 @@ const goLogin = () => {
 
 <style scoped>
 .page {
+  position: relative;
   width: 100vw;
   height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   background: linear-gradient(135deg, #1e88e5 0%, #42a5f5 40%, #e3f2fd 100%);
 }
 
 .login-card {
+  position: relative;
+  z-index: 1;
   width: 420px;
   padding: 32px 40px 40px;
   background-color: #ffffff;
@@ -206,9 +219,29 @@ const goLogin = () => {
 }
 
 .icon {
+  display: inline-block;
+  vertical-align: middle;
+  width: 20px;
+  height: 20px;
   margin-right: 8px;
-  font-size: 16px;
-  color: #909399;
+  flex-shrink: 0;
+  background: linear-gradient(145deg, #1e88e5 0%, #42a5f5 55%, #64b5f6 100%);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+}
+
+.icon--account {
+  -webkit-mask-image: url('/账号.svg');
+  mask-image: url('/账号.svg');
+}
+
+.icon--password {
+  -webkit-mask-image: url('/密码.svg');
+  mask-image: url('/密码.svg');
 }
 
 input,
@@ -235,17 +268,28 @@ select:invalid {
 }
 
 .toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 4px;
   border: none;
   background: none;
-  padding: 0 2px;
-  height: 40px;
   cursor: pointer;
-  color: #1e88e5;
-  font-size: 13px;
+  color: #909399;
+  border-radius: 4px;
+  transition: color 0.2s ease, background-color 0.2s ease;
+  flex-shrink: 0;
 }
 
 .toggle-btn:hover {
-  text-decoration: underline;
+  color: #1e88e5;
+  background-color: rgba(30, 136, 229, 0.08);
+}
+
+.toggle-btn :deep(.el-icon) {
+  margin: 0;
 }
 
 .error-text {

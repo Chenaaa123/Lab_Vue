@@ -57,9 +57,26 @@ const userInfo = computed(() => {
 
 const currentUserId = computed(() => userInfo.value?.userId ?? userInfo.value?.id)
 
-const userRole = computed(() => localStorage.getItem('role') || '')
-const isAdmin = computed(() => userRole.value === '系统管理员')
-const isLabManager = computed(() => userRole.value === '实验室管理员')
+/**
+ * 角色优先取 userInfo（后端最新），再回退 localStorage.role，
+ * 避免出现系统管理员被当成学生/老师而触发“只能报修本人预约”。
+ */
+const userRole = computed(() => {
+  return (
+    userInfo.value?.role ??
+    userInfo.value?.roleName ??
+    userInfo.value?.role_code ??
+    localStorage.getItem('role') ??
+    ''
+  )
+})
+const normalizedRole = computed(() => normalizeReservationRole(userRole.value))
+const isAdmin = computed(
+  () => userRole.value === '系统管理员' || normalizedRole.value === 'system_admin',
+)
+const isLabManager = computed(
+  () => userRole.value === '实验室管理员' || normalizedRole.value === 'lab_admin',
+)
 const canAudit = computed(() => isAdmin.value || isLabManager.value)
 const router = useRouter()
 
@@ -381,9 +398,9 @@ const isReservationLabManagedByCurrentUser = (row) => {
 
 /**
  * 是否可报修：与后端一致 — status=1 且（useStatus=2 或 endTime 已过），再按角色校验
- * - 学生/教师：须为预约人本人
  * - 系统管理员：任意满足前置条件的预约
  * - 实验室管理员：仅所管辖实验室的预约
+ * - 学生/教师：仅本人预约
  */
 const canRepair = (row) => {
   if (!isReservationEligibleForRepair(row)) return false
@@ -394,10 +411,16 @@ const canRepair = (row) => {
   )
   if (!uid) return false
 
-  if (rowUserId && uid === rowUserId) return true
+  // 系统管理员：可对所有满足条件的预约记录报修
   if (isAdmin.value) return true
-  if (isLabManager.value && isReservationLabManagedByCurrentUser(row)) return true
-  return false
+
+  // 实验室管理员：只能对自己管辖实验室内的预约报修
+  if (isLabManager.value) {
+    return isReservationLabManagedByCurrentUser(row)
+  }
+
+  // 其它角色（学生/老师）：仅本人预约可报修
+  return !!rowUserId && uid === rowUserId
 }
 
 // 是否可以审核：仅待审核(0)可审核
@@ -520,13 +543,22 @@ const submitRepair = async () => {
     return
   }
 
+  // 提交前再校验一次权限/状态，避免并发状态变化导致误提交
+  if (!canRepair(repairRow.value)) {
+    ElMessage.warning('当前预约不满足报修条件或无权限报修')
+    return
+  }
+
   repairSubmitting.value = true
   try {
     const data = {
       userId: uid,
-      role: normalizeReservationRole(userRole.value),
       title: repairForm.title.trim(),
       description: repairForm.description?.trim() || '',
+    }
+    // role 可选：识别到合法角色码才传；否则不传让后端按 userId 自动识别
+    if (['system_admin', 'lab_admin', 'teacher', 'student'].includes(normalizedRole.value)) {
+      data.role = normalizedRole.value
     }
     await repairReservationApi(repairRow.value?.id, data)
     ElMessage.success('报修申请已提交')

@@ -302,7 +302,7 @@ const updatePieChart = () => {
     },
     legend: {
       show: hasPieData,
-      data: ['正常', '停用', '维护中'],
+      data: pieSeriesData.map((item) => item.name),
       bottom: 6,
       left: 'center',
       itemGap: 24,

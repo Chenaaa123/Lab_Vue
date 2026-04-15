@@ -1,9 +1,10 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { logoutApi } from '../api/auth'
 import { getProfileApi } from '../api/user'
+import { subscribeUserProfileUpdated } from '../utils/profileRefresh'
 
 const router = useRouter()
 const route = useRoute()
@@ -150,13 +151,26 @@ const loadUserProfile = async () => {
 onMounted(() => {
   loadUserProfile()
 })
+
+const unsubUserProfile = subscribeUserProfileUpdated((patch) => {
+  if (!patch || typeof patch !== 'object') return
+  userProfile.value = { ...(userProfile.value || {}), ...patch }
+})
+
+onUnmounted(() => {
+  unsubUserProfile?.()
+})
 </script>
 
 <template>
   <el-container class="layout">
     <el-aside width="220px" class="aside">
       <div class="logo-box">
-        <div class="logo-icon">🧪</div>
+        <div
+          class="logo-icon"
+          role="img"
+          aria-label="校园实验室预约系统"
+        />
         <div class="logo-text">校园实验室预约系统</div>
       </div>
 
@@ -170,18 +184,18 @@ onMounted(() => {
         @select="handleSelect"
       >
         <el-menu-item index="/">
-          <span class="menu-icon">🏠</span>
+          <span class="menu-icon menu-icon--home" aria-hidden="true" />
           <template #title>系统首页</template>
         </el-menu-item>
 
         <el-menu-item v-if="showPersonalCenterMenu" index="/profile">
-          <span class="menu-icon">👤</span>
+          <span class="menu-icon menu-icon--profile" aria-hidden="true" />
           <template #title>个人中心</template>
         </el-menu-item>
 
         <el-sub-menu index="info">
           <template #title>
-            <span class="menu-icon">📋</span>
+            <span class="menu-icon menu-icon--info" aria-hidden="true" />
             <span>信息管理</span>
           </template>
           <!-- 公告信息 / 实验室分类 仅系统管理员可见 -->
@@ -199,7 +213,7 @@ onMounted(() => {
 
         <el-sub-menu v-if="isAdmin" index="user">
           <template #title>
-            <span class="menu-icon">👥</span>
+            <span class="menu-icon menu-icon--users" aria-hidden="true" />
             <span>用户管理</span>
           </template>
           <el-menu-item index="/users">系统管理员</el-menu-item>
@@ -214,7 +228,7 @@ onMounted(() => {
         <div class="breadcrumb">
           <el-breadcrumb separator="/">
             <el-breadcrumb-item :to="{ path: '/' }" class="breadcrumb-home">
-              <span class="breadcrumb-icon">🏠</span>
+              <span class="breadcrumb-icon" aria-hidden="true" />
               首页
             </el-breadcrumb-item>
             <el-breadcrumb-item v-if="route.meta.title" class="breadcrumb-current">
@@ -272,14 +286,21 @@ onMounted(() => {
 }
 
 .logo-icon {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
+  width: 34px;
+  height: 34px;
   margin-right: 10px;
   flex-shrink: 0;
+  /* 基于 public/系统Logo.svg 形状，白→浅青渐变填充，适配深蓝侧栏 */
+  background: linear-gradient(155deg, #ffffff 0%, #e1f5fe 45%, #b3e5fc 100%);
+  -webkit-mask-image: url('/系统Logo.svg');
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-image: url('/系统Logo.svg');
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.18));
 }
 
 .logo-text {
@@ -296,8 +317,40 @@ onMounted(() => {
 }
 
 .menu-icon {
+  display: inline-block;
+  vertical-align: middle;
+  width: 20px;
+  height: 20px;
   margin-right: 8px;
-  font-size: 18px;
+  flex-shrink: 0;
+  background: linear-gradient(155deg, #ffffff 0%, #e1f5fe 48%, #90caf9 100%);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12));
+}
+
+.menu-icon--home {
+  -webkit-mask-image: url('/系统首页.svg');
+  mask-image: url('/系统首页.svg');
+}
+
+.menu-icon--profile {
+  -webkit-mask-image: url('/个人中心.svg');
+  mask-image: url('/个人中心.svg');
+}
+
+.menu-icon--info {
+  -webkit-mask-image: url('/信息管理.svg');
+  mask-image: url('/信息管理.svg');
+}
+
+.menu-icon--users {
+  -webkit-mask-image: url('/用户管理.svg');
+  mask-image: url('/用户管理.svg');
 }
 
 .header {
@@ -340,7 +393,20 @@ onMounted(() => {
 }
 
 .breadcrumb-icon {
-  font-size: 16px;
+  display: inline-block;
+  vertical-align: middle;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  background: linear-gradient(145deg, #1e88e5 0%, #42a5f5 55%, #64b5f6 100%);
+  -webkit-mask-image: url('/系统首页.svg');
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-image: url('/系统首页.svg');
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
 }
 
 .breadcrumb-current :deep(.el-breadcrumb__inner) {

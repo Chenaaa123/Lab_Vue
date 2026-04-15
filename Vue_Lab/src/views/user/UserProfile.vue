@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getProfileApi, updateProfileApi, changePasswordApi } from '../../api/user'
+import { notifyUserProfileUpdated } from '../../utils/profileRefresh'
 
 const router = useRouter()
 
@@ -69,13 +70,31 @@ onMounted(() => {
 })
 
 const handleAvatarChange = (file) => {
+  const isJPG = file.raw.type === 'image/jpeg'
+  const isPNG = file.raw.type === 'image/png'
+  const isLt2M = file.raw.size / 1024 / 1024 < 2
+
+  if (!isJPG && !isPNG) {
+    ElMessage.error('头像图片只能是 JPG 或 PNG 格式!')
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error('头像图片大小不能超过 2MB!')
+    return false
+  }
+
   const reader = new FileReader()
   reader.onload = (e) => {
     const base64 = e.target.result
     avatarPreview.value = base64
     profileForm.value.avatar = base64
+    ElMessage.success('图片已选择，将在保存资料时上传')
   }
   reader.readAsDataURL(file.raw)
+  reader.onerror = () => {
+    ElMessage.error('图片读取失败，请重试')
+  }
+  return false
 }
 
 const persistUserInfoPartial = (patch) => {
@@ -96,17 +115,23 @@ const saveProfile = async () => {
   }
   saveLoading.value = true
   try {
+    const avatarPayload = profileForm.value.avatar || ''
     await updateProfileApi(userId.value, {
       userName: profileForm.value.userName.trim(),
-      avatar: profileForm.value.avatar,
+      avatar: avatarPayload,
     })
-    persistUserInfoPartial({
+    const patch = {
       userName: profileForm.value.userName.trim(),
-      avatar: profileForm.value.avatar,
-    })
+      avatar: avatarPayload,
+    }
+    persistUserInfoPartial(patch)
+    notifyUserProfileUpdated(patch)
     ElMessage.success('个人信息已保存')
+    // 以数据库最新值为准（后端可能规范化字段），同时刷新顶部信息
+    await loadProfile()
   } catch (e) {
-    ElMessage.error(e.message || '保存失败')
+    const msg = e.response?.data?.message ?? e.message ?? '保存失败'
+    ElMessage.error(msg)
   } finally {
     saveLoading.value = false
   }
