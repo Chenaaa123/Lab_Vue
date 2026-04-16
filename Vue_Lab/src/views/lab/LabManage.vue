@@ -145,6 +145,22 @@ const getCategoryManagerId = (c) => {
   )
 }
 
+/** 实验室管理员仅可操作「自己任管实验室分类」下的数据；筛选与新增表单共用此项 */
+const managedCategories = computed(() => {
+  if (!isLabManager.value || currentUserId.value == null || currentUserId.value === '') {
+    return categories.value
+  }
+  const uid = Number(currentUserId.value)
+  return (categories.value || []).filter((c) => {
+    const mid = getCategoryManagerId(c)
+    return mid != null && Number(mid) === uid
+  })
+})
+
+const categorySelectOptions = computed(() =>
+  isLabManager.value ? managedCategories.value : categories.value,
+)
+
 const getCategoryName = (row) => {
   const id = row?.categoryId ?? row?.category?.id ?? row?.category_id
   if (!id) return row?.categoryName || '-'
@@ -452,7 +468,7 @@ onUnmounted(() => {
             :loading="categoryLoading"
           >
             <el-option
-              v-for="c in categories"
+              v-for="c in categorySelectOptions"
               :key="c.id"
               :label="c.name || c.categoryName"
               :value="c.id"
@@ -471,7 +487,7 @@ onUnmounted(() => {
             <el-option label="维护中" :value="2" />
           </el-select>
         </el-form-item>
-        <el-form-item>
+        <el-form-item class="toolbar-actions">
           <el-button type="primary" @click="() => { query.page = 1; loadList() }">查询</el-button>
           <el-button @click="resetQuery">重置</el-button>
           <el-button
@@ -481,14 +497,15 @@ onUnmounted(() => {
           >
             批量删除
           </el-button>
-        </el-form-item>
-
-        <!-- 仅系统管理员可新增，实验室管理员不能新增；与批量删除同一行，右侧对齐操作列 -->
-        <el-form-item
-          v-if="isAdmin"
-          class="toolbar-add"
-        >
-          <el-button type="primary" @click="openCreate">新增</el-button>
+          <!-- 系统管理员与实验室管理员均可新增；实验室管理员仅能选择任管分类 -->
+          <el-button
+            v-if="isAdmin || isLabManager"
+            type="primary"
+            :disabled="isLabManager && managedCategories.length === 0"
+            @click="openCreate"
+          >
+            新增
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -619,7 +636,7 @@ onUnmounted(() => {
             @change="onCategoryChange"
           >
             <el-option
-              v-for="c in categories"
+              v-for="c in categorySelectOptions"
               :key="c.id"
               :label="c.name || c.categoryName"
               :value="c.id"
@@ -680,8 +697,8 @@ onUnmounted(() => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.toolbar-add {
-  margin-left: 255px;
+.toolbar-actions :deep(.el-button + .el-button) {
+  margin-left: 8px;
 }
 
 .op-row {

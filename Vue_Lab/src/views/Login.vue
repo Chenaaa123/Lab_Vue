@@ -1,12 +1,13 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { View, Hide } from '@element-plus/icons-vue'
 import { loginApi } from '../api/auth'
 import ParticleLinkBackground from '../components/ParticleLinkBackground.vue'
 
 const router = useRouter()
+const route = useRoute()
 
 const account = ref('')
 const password = ref('')
@@ -55,6 +56,17 @@ const handleLogin = async () => {
 const goRegister = () => {
   router.push('/register')
 }
+
+const goResetPassword = () => {
+  router.push('/reset-password')
+}
+
+onMounted(() => {
+  const accountFromQuery = route.query.account
+  if (typeof accountFromQuery === 'string' && accountFromQuery.trim()) {
+    account.value = accountFromQuery.trim()
+  }
+})
 </script>
 
 <template>
@@ -127,6 +139,10 @@ const goRegister = () => {
         <span>还没有账号？</span>
         <button type="button" class="link-btn" @click="goRegister">
           注册
+        </button>
+        <span class="split-dot">·</span>
+        <button type="button" class="link-btn" @click="goResetPassword">
+          忘记密码
         </button>
       </div>
     </div>
@@ -398,6 +414,11 @@ select::placeholder {
 
 .link-btn:hover {
   color: #66b1ff;
+}
+
+.split-dot {
+  margin: 0 var(--spacing-xs);
+  color: var(--color-text-placeholder);
 }
 
 input::placeholder {

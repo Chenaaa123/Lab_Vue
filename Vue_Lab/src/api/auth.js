@@ -23,3 +23,11 @@ export function logoutApi() {
   })
 }
 
+export function resetPasswordByOldPasswordApi(data) {
+  return request({
+    url: '/lab/auth/password/reset-by-old-password',
+    method: 'put',
+    data,
+  })
+}
+

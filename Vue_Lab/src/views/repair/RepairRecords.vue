@@ -9,6 +9,7 @@ import { extractPagedTotal } from '../../utils/pagination'
 import { toListApiRole } from '../../utils/apiRole'
 import { subscribeLabsStaleForCategory } from '../../utils/labCategoryRefresh'
 import { extractLabId, findLabById } from '../../utils/labLookup'
+import { updateLabStatusSafe } from '../../utils/labStatusUpdate'
 
 const router = useRouter()
 const loading = ref(false)
@@ -213,6 +214,12 @@ const submitMaintenance = async () => {
     }
 
     await createMaintenanceApi(payload)
+    // 生成检修后：实验室状态置为维护中（2）
+    try {
+      await updateLabStatusSafe(payload.labId, 2)
+    } catch {
+      // 状态更新失败不阻断检修创建主流程
+    }
     ElMessage.success('已创建检修记录')
     maintenanceDialogVisible.value = false
     await loadRepairs()

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
+import ResetPassword from '../views/ResetPassword.vue'
 import MainLayout from '../layouts/MainLayout.vue'
 
 const routes = [
@@ -14,6 +15,12 @@ const routes = [
     path: '/register',
     name: 'Register',
     component: Register,
+    meta: { public: true },
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: ResetPassword,
     meta: { public: true },
   },
   {

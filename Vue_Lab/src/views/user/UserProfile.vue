@@ -205,7 +205,7 @@ const changePassword = async () => {
         <el-card class="profile-card" shadow="hover">
           <template #header>
             <div class="card-head">
-              <span class="card-head__icon">✏️</span>
+              <span class="card-head__icon card-head__icon--account" aria-hidden="true" />
               <span class="card-head__title">基本资料</span>
             </div>
           </template>
@@ -232,7 +232,7 @@ const changePassword = async () => {
         <el-card class="profile-card profile-card--security" shadow="hover">
           <template #header>
             <div class="card-head">
-              <span class="card-head__icon">🔐</span>
+              <span class="card-head__icon card-head__icon--password" aria-hidden="true" />
               <span class="card-head__title">安全设置</span>
             </div>
           </template>
@@ -410,7 +410,27 @@ const changePassword = async () => {
 }
 
 .card-head__icon {
-  font-size: 18px;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  background: linear-gradient(145deg, #1e88e5 0%, #42a5f5 55%, #64b5f6 100%);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+}
+
+.card-head__icon--account {
+  -webkit-mask-image: url('/账号.svg');
+  mask-image: url('/账号.svg');
+}
+
+.card-head__icon--password {
+  -webkit-mask-image: url('/密码.svg');
+  mask-image: url('/密码.svg');
 }
 
 .card-head__title {

@@ -3,83 +3,82 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { View, Hide } from '@element-plus/icons-vue'
-import { registerApi } from '../api/auth'
+import { resetPasswordByOldPasswordApi } from '../api/auth'
 import ParticleLinkBackground from '../components/ParticleLinkBackground.vue'
 
 const router = useRouter()
 
-const account = ref('')
-const password = ref('')
-const confirmPassword = ref('')
-const role = ref('学生')
+const form = ref({
+  userAccount: '',
+  oldPassword: '',
+  newPassword: '',
+  confirmNewPassword: '',
+})
+
 const loading = ref(false)
 const error = ref('')
-const showPassword = ref(false)
+const showOldPassword = ref(false)
+const showNewPassword = ref(false)
 const showConfirmPassword = ref(false)
 
-/** 公开注册可选角色（系统管理员须由后台或既有管理员创建，不可自助注册） */
-const roles = [
-  { label: '学生', value: '学生' },
-  { label: '老师', value: '老师' },
-  { label: '实验室管理员', value: '实验室管理员' },
-]
-
-const handleRegister = async () => {
+const handleResetPassword = async () => {
   error.value = ''
-
-  if (!account.value || !password.value || !confirmPassword.value || !role.value) {
-    error.value = '请完整填写所有信息并选择角色'
-    return
+  const payload = {
+    userAccount: form.value.userAccount.trim(),
+    oldPassword: form.value.oldPassword,
+    newPassword: form.value.newPassword,
+    confirmNewPassword: form.value.confirmNewPassword,
   }
 
-  if (password.value !== confirmPassword.value) {
-    error.value = '两次输入的密码不一致'
+  if (!payload.userAccount || !payload.oldPassword || !payload.newPassword || !payload.confirmNewPassword) {
+    error.value = '请完整填写账号、原密码、新密码和确认新密码'
     return
   }
-
-  if (role.value === '系统管理员') {
-    error.value = '不能选择系统管理员身份注册，该角色由系统分配'
+  if (payload.newPassword.length < 6) {
+    error.value = '新密码至少 6 位'
+    return
+  }
+  if (payload.newPassword !== payload.confirmNewPassword) {
+    error.value = '新密码与确认新密码不一致'
+    return
+  }
+  if (payload.newPassword === payload.oldPassword) {
+    error.value = '新密码不能与原密码相同'
     return
   }
 
   loading.value = true
   try {
-    await registerApi({
-      userAccount: account.value,
-      password: password.value,
-      role: role.value,
+    await resetPasswordByOldPasswordApi(payload)
+    ElMessage.success('密码重置成功，请使用新密码登录')
+    router.push({
+      path: '/login',
+      query: { account: payload.userAccount },
     })
-
-    ElMessage.success('注册成功，请使用新账号登录')
-    router.push('/login')
   } catch (e) {
-    error.value = e?.message || '注册失败，请稍后重试'
+    error.value = e?.message || '重置失败，请稍后重试'
   } finally {
     loading.value = false
   }
 }
 
-const goLogin = () => {
-  router.push('/login')
-}
-
-const goResetPassword = () => {
-  router.push('/reset-password')
-}
+const goLogin = () => router.push('/login')
+const goRegister = () => router.push('/register')
 </script>
 
 <template>
   <div class="page">
     <ParticleLinkBackground />
-    <div class="login-card">
-      <h2 class="title">注册校园实验室预约系统账号</h2>
+    <div class="reset-card">
+      <h2 class="title">忘记密码</h2>
+      <p class="subtitle">输入账号、原密码和新密码即可完成重置</p>
 
-      <form class="form" @submit.prevent="handleRegister">
+      <form class="form" @submit.prevent="handleResetPassword">
         <div class="form-item">
           <div class="input-wrapper">
             <span class="icon icon--account" aria-hidden="true" />
             <input
-              v-model="account"
+              v-model="form.userAccount"
               type="text"
               placeholder="请输入账号"
             >
@@ -90,18 +89,18 @@ const goResetPassword = () => {
           <div class="input-wrapper">
             <span class="icon icon--password" aria-hidden="true" />
             <input
-              v-model="password"
-              :type="showPassword ? 'text' : 'password'"
-              placeholder="请输入密码"
+              v-model="form.oldPassword"
+              :type="showOldPassword ? 'text' : 'password'"
+              placeholder="请输入原密码"
             >
             <button
               type="button"
               class="toggle-btn"
-              :aria-label="showPassword ? '隐藏密码' : '显示密码'"
-              @click="showPassword = !showPassword"
+              :aria-label="showOldPassword ? '隐藏密码' : '显示密码'"
+              @click="showOldPassword = !showOldPassword"
             >
               <el-icon :size="18">
-                <View v-if="!showPassword" />
+                <View v-if="!showOldPassword" />
                 <Hide v-else />
               </el-icon>
             </button>
@@ -112,9 +111,31 @@ const goResetPassword = () => {
           <div class="input-wrapper">
             <span class="icon icon--password" aria-hidden="true" />
             <input
-              v-model="confirmPassword"
+              v-model="form.newPassword"
+              :type="showNewPassword ? 'text' : 'password'"
+              placeholder="请输入新密码（至少 6 位）"
+            >
+            <button
+              type="button"
+              class="toggle-btn"
+              :aria-label="showNewPassword ? '隐藏密码' : '显示密码'"
+              @click="showNewPassword = !showNewPassword"
+            >
+              <el-icon :size="18">
+                <View v-if="!showNewPassword" />
+                <Hide v-else />
+              </el-icon>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-item">
+          <div class="input-wrapper">
+            <span class="icon icon--password" aria-hidden="true" />
+            <input
+              v-model="form.confirmNewPassword"
               :type="showConfirmPassword ? 'text' : 'password'"
-              placeholder="请再次输入密码"
+              placeholder="请再次输入新密码"
             >
             <button
               type="button"
@@ -130,41 +151,17 @@ const goResetPassword = () => {
           </div>
         </div>
 
-        <div class="form-item">
-          <div class="input-wrapper">
-            <select v-model="role">
-              <option value="" disabled>请选择角色</option>
-              <option
-                v-for="item in roles"
-                :key="item.value"
-                :value="item.value"
-              >
-                {{ item.label }}
-              </option>
-            </select>
-          </div>
-        </div>
-
         <p v-if="error" class="error-text">{{ error }}</p>
 
-        <button
-          class="primary-btn"
-          type="submit"
-          :disabled="loading"
-        >
-          {{ loading ? '注册中...' : '注册' }}
+        <button class="primary-btn" type="submit" :disabled="loading">
+          {{ loading ? '重置中...' : '重置密码' }}
         </button>
       </form>
 
-      <div class="footer-text">
-        <span>已经有账号？</span>
-        <button type="button" class="link-btn" @click="goLogin">
-          去登录
-        </button>
-        <span class="split-dot">·</span>
-        <button type="button" class="link-btn" @click="goResetPassword">
-          忘记密码
-        </button>
+      <div class="footer-actions">
+        <button type="button" class="link-btn" @click="goLogin">返回登录</button>
+        <span class="dot">·</span>
+        <button type="button" class="link-btn" @click="goRegister">去注册</button>
       </div>
     </div>
   </div>
@@ -174,48 +171,54 @@ const goResetPassword = () => {
 .page {
   position: relative;
   width: 100vw;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   background: linear-gradient(135deg, #1e88e5 0%, #42a5f5 40%, #e3f2fd 100%);
+  padding: 24px;
+  box-sizing: border-box;
 }
 
-.login-card {
+.reset-card {
   position: relative;
   z-index: 1;
-  width: 420px;
-  padding: 32px 40px 40px;
-  background-color: #ffffff;
-  border-radius: 8px;
+  width: 100%;
+  max-width: 460px;
+  padding: 32px 36px 30px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
   box-sizing: border-box;
 }
 
 .title {
-  margin: 0 0 24px;
+  margin: 0 0 8px;
   text-align: center;
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 600;
-  color: #333;
+  color: #2a2f3a;
+}
+
+.subtitle {
+  margin: 0 0 20px;
+  text-align: center;
+  color: #7a8599;
+  font-size: 13px;
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.form-item {
-  width: 100%;
+  gap: 14px;
 }
 
 .input-wrapper {
   display: flex;
   align-items: center;
   border: 1px solid #dcdfe6;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 0 12px;
   background-color: #fff;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -252,10 +255,9 @@ const goResetPassword = () => {
   mask-image: url('/密码.svg');
 }
 
-input,
-select {
+input {
   flex: 1;
-  height: 40px;
+  height: 44px;
   border: none;
   outline: none;
   font-size: 14px;
@@ -267,20 +269,12 @@ input::placeholder {
   color: #c0c4cc;
 }
 
-select {
-  color: #606266;
-}
-
-select:invalid {
-  color: #c0c4cc;
-}
-
 .toggle-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 34px;
+  min-height: 34px;
   padding: 4px;
   border: none;
   background: none;
@@ -308,10 +302,10 @@ select:invalid {
 
 .primary-btn {
   width: 100%;
-  height: 40px;
+  height: 42px;
   margin-top: 4px;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   background-color: #1e88e5;
   color: #fff;
   font-size: 15px;
@@ -320,9 +314,9 @@ select:invalid {
   transition: background-color 0.2s, box-shadow 0.2s;
 }
 
-.primary-btn:hover {
+.primary-btn:hover:not(:disabled) {
   background-color: #1565c0;
-  box-shadow: 0 4px 10px rgba(21, 101, 192, 0.4);
+  box-shadow: 0 4px 10px rgba(21, 101, 192, 0.35);
 }
 
 .primary-btn:disabled {
@@ -331,17 +325,22 @@ select:invalid {
   box-shadow: none;
 }
 
-.footer-text {
+.footer-actions {
   margin-top: 16px;
-  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8a94a8;
   font-size: 13px;
-  color: #666;
+}
+
+.dot {
+  margin: 0 8px;
 }
 
 .link-btn {
   border: none;
   padding: 0;
-  margin-left: 4px;
   background: none;
   color: #1e88e5;
   cursor: pointer;
@@ -352,10 +351,17 @@ select:invalid {
   text-decoration: underline;
 }
 
-.split-dot {
-  margin: 0 6px;
-  color: #c0c4cc;
+@media (max-width: 480px) {
+  .page {
+    padding: 14px;
+  }
+
+  .reset-card {
+    padding: 24px 18px 20px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
 }
 </style>
-
-

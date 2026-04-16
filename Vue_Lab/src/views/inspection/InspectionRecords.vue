@@ -9,6 +9,7 @@ import { extractPagedTotal } from '../../utils/pagination'
 import { extractLabId, findLabById } from '../../utils/labLookup'
 import { toListApiRole } from '../../utils/apiRole'
 import { subscribeLabsStaleForCategory } from '../../utils/labCategoryRefresh'
+import { updateLabStatusSafe } from '../../utils/labStatusUpdate'
 
 const loading = ref(false)
 const maintenances = ref([])
@@ -313,6 +314,12 @@ const openCompleteDialog = async (row) => {
     await updateMaintenanceApi(row.id, {
       status: 1,
     })
+    // 检修完成后：实验室状态置回正常（1）
+    try {
+      await updateLabStatusSafe(row.labId, 1)
+    } catch {
+      // 状态更新失败不阻断检修完成主流程
+    }
     ElMessage.success('检修已完成')
     await loadMaintenances()
   } catch (e) {

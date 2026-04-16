@@ -38,6 +38,7 @@ const dialogVisible = ref(false)
 const dialogLoading = ref(false)
 const dialogMode = ref('edit') // 'create' | 'edit'
 const currentId = ref(null)
+const originalRole = ref('')
 const form = reactive({
   userAccount: '',
   userName: '',
@@ -79,6 +80,11 @@ const matchRole = (userRole, mode) => {
     )
   }
   return true
+}
+
+const isSystemAdminRole = (value) => {
+  const r = String(value ?? '').trim()
+  return r === '系统管理员' || r === 'ADMIN' || r === 'Admin' || r.includes('系统管理员')
 }
 
 const loadList = async () => {
@@ -203,9 +209,30 @@ const roleOptions = computed(() => {
   ]
 })
 
+const editableRoleOptions = [
+  { label: '实验室管理员', value: '实验室管理员' },
+  { label: '老师', value: '老师' },
+  { label: '学生', value: '学生' },
+]
+
+const roleSelectDisabled = computed(() => {
+  return dialogMode.value === 'edit' && isSystemAdminRole(originalRole.value)
+})
+
+const dialogRoleOptions = computed(() => {
+  if (dialogMode.value === 'edit') {
+    if (isSystemAdminRole(originalRole.value)) {
+      return [{ label: '系统管理员', value: '系统管理员' }]
+    }
+    return editableRoleOptions
+  }
+  return roleOptions.value
+})
+
 const openCreate = () => {
   dialogMode.value = 'create'
   currentId.value = null
+  originalRole.value = ''
   form.userAccount = ''
   form.userName = ''
   // 若当前角色只有一个可选项，则默认选中
@@ -221,7 +248,9 @@ const openEdit = (row) => {
   currentId.value = row.userId ?? row.id
   form.userAccount = (row.userAccount ?? row.account ?? row.username ?? row.userName ?? '').toString()
   form.userName = (row.realName ?? row.name ?? row.userName ?? row.userAccount ?? '').toString()
-  form.role = (row.role ?? row.roleName ?? row.role_code ?? '').toString()
+  const rowRole = (row.role ?? row.roleName ?? row.role_code ?? '').toString()
+  originalRole.value = rowRole
+  form.role = rowRole
   form.password = ''
   form.avatar = row.avatar ?? row.avatarUrl ?? '' // 初始化头像
   dialogVisible.value = true
@@ -268,6 +297,16 @@ const submitEdit = async () => {
   if (!form.role?.trim()) {
     ElMessage.warning('请选择角色')
     return
+  }
+  if (dialogMode.value === 'edit') {
+    if (isSystemAdminRole(originalRole.value) && !isSystemAdminRole(form.role)) {
+      ElMessage.warning('系统管理员角色不能修改')
+      return
+    }
+    if (!isSystemAdminRole(originalRole.value) && isSystemAdminRole(form.role)) {
+      ElMessage.warning('非系统管理员不能修改为系统管理员')
+      return
+    }
   }
   dialogLoading.value = true
   try {
@@ -461,9 +500,14 @@ onMounted(() => {
           <el-input v-model="form.userName" placeholder="姓名" />
         </el-form-item>
         <el-form-item label="角色" required>
-          <el-select v-model="form.role" placeholder="请选择角色" style="width: 100%">
+          <el-select
+            v-model="form.role"
+            placeholder="请选择角色"
+            style="width: 100%"
+            :disabled="roleSelectDisabled"
+          >
             <el-option
-              v-for="opt in roleOptions"
+              v-for="opt in dialogRoleOptions"
               :key="opt.value"
               :label="opt.label"
               :value="opt.value"
